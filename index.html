@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Piano Chord Trainer - C Major Mastery</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1b26; color: #a9b1d6; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .container { background: #24283b; padding: 40px; border-radius: 30px; box-shadow: 0 25px 60px rgba(0,0,0,0.5); text-align: center; width: 98%; max-width: 1100px; position: relative; }
+        
+        #progress { font-size: 1.2rem; color: #7aa2f7; margin-bottom: 10px; }
+        /* タイトル部分を太く大きく修正 */
+        #question-label { font-size: 1.5rem; font-weight: 900; color: #7aa2f7; text-transform: uppercase; letter-spacing: 5px; margin-bottom: 10px; }
+        #question { font-size: 5.5rem; font-weight: 900; color: #ff9e64; margin: 5px 0; }
+        #inversion-type { font-size: 1.8rem; color: #bb9af7; margin-bottom: 20px; font-weight: bold; }
+        #message { height: 2rem; margin-bottom: 20px; font-size: 1.3rem; font-weight: 500; }
+        
+        .keyboard-container { width: 100%; padding: 20px 0; overflow-x: auto; }
+        .keyboard { display: flex; justify-content: center; position: relative; height: 180px; padding: 20px; background: #16161e; border-radius: 15px; min-width: 1000px; }
+        
+        .key { position: relative; border: 1px solid #1a1b26; background: #c0caf5; width: 42px; height: 100%; border-radius: 0 0 6px 6px; cursor: pointer; transition: all 0.1s; box-sizing: border-box; }
+        .key.black { background: #414868; width: 28px; height: 65%; margin-left: -14px; margin-right: -14px; z-index: 2; border: none; border-radius: 0 0 4px 4px; }
+        .key.active { background: #e0af68 !important; transform: translateY(4px); }
+        .key.correct { background: #9ece6a !important; }
+        .key.wrong { background: #f7768e !important; }
+
+        .controls { margin-top: 30px; display: flex; gap: 20px; justify-content: center; }
+        button { padding: 12px 35px; font-size: 1.1rem; cursor: pointer; border: none; border-radius: 12px; font-weight: bold; transition: 0.3s; }
+        .btn-check { background: #7aa2f7; color: #1a1b26; }
+        .btn-next { background: #414868; color: #c0caf5; }
+
+        #result-screen { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #24283b; border-radius: 30px; flex-direction: column; align-items: center; justify-content: center; z-index: 10; }
+        #result-score { font-size: 5rem; font-weight: 900; color: #bb9af7; margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="progress">Question: 1 / 10</div>
+    <div id="question-label">ハ長調・コードマスター</div>
+    <div id="question">--</div>
+    <div id="inversion-type">--</div>
+    <div id="message">鍵盤を低い順に3つ選んでね</div>
+
+    <div class="keyboard-container">
+        <div class="keyboard" id="keyboard"></div>
+    </div>
+
+    <div class="controls">
+        <button id="check-btn" class="btn-check" onclick="checkAnswer()">回答する</button>
+        <button id="next-btn" class="btn-next" onclick="nextQuestion()" style="display:none;">次の問題へ</button>
+    </div>
+
+    <div id="result-screen">
+        <h1>Lesson Complete!</h1>
+        <div id="result-score">0 / 10</div>
+        <button class="btn-check" onclick="resetGame()">もう一度挑戦する</button>
+    </div>
+</div>
+
+<script>
+    const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const keyboardLayout = [...notes, ...notes, 'C'];
+
+    const masterChords = [
+        { name: "C", inv: "基本形", target: ["C", "E", "G"] },
+        { name: "F", inv: "第2転回形", target: ["C", "F", "A"] },
+        { name: "G", inv: "第1転回形", target: ["B", "D", "G"] },
+        { name: "G7", inv: "第2転回形", target: ["B", "F", "G"] }
+    ];
+
+    let currentChord = {};
+    let selectedIndices = [];
+    let correctCount = 0;
+    let questionCount = 0;
+    const totalQuestions = 10;
+
+    const keyboard = document.getElementById('keyboard');
+    keyboardLayout.forEach((note, index) => {
+        const isBlack = note.includes('#');
+        const keyDiv = document.createElement('div');
+        keyDiv.className = `key ${isBlack ? 'black' : ''}`;
+        keyDiv.dataset.index = index;
+        keyDiv.onclick = () => toggleKey(keyDiv, index);
+        keyboard.appendChild(keyDiv);
+    });
+
+    function toggleKey(element, index) {
+        if (selectedIndices.includes(index)) {
+            element.classList.remove('active');
+            selectedIndices = selectedIndices.filter(i => i !== index);
+        } else if (selectedIndices.length < 3) {
+            element.classList.add('active');
+            selectedIndices.push(index);
+            selectedIndices.sort((a, b) => a - b);
+        }
+    }
+
+    function nextQuestion() {
+        if (questionCount >= totalQuestions) { showResult(); return; }
+        questionCount++;
+        document.getElementById('progress').innerText = `Question: ${questionCount} / ${totalQuestions}`;
+        currentChord = masterChords[Math.floor(Math.random() * masterChords.length)];
+        document.getElementById('question').innerText = currentChord.name;
+        document.getElementById('inversion-type').innerText = currentChord.inv;
+        document.getElementById('message').innerText = "構成音を低い順に3つ選んでね";
+        document.getElementById('message').style.color = "#a9b1d6";
+        selectedIndices = [];
+        resetKeyClasses();
+        document.getElementById('check-btn').style.display = "block";
+        document.getElementById('next-btn').style.display = "none";
+    }
+
+    function checkAnswer() {
+        if (selectedIndices.length !== 3) return;
+        const userNotes = selectedIndices.map(i => keyboardLayout[i]);
+        const isCorrect = userNotes.every((note, idx) => note === currentChord.target[idx]);
+        const msg = document.getElementById('message');
+        if (isCorrect) {
+            msg.innerText = "✨ 正解です！完璧！";
+            msg.style.color = "#9ece6a";
+            correctCount++;
+            selectedIndices.forEach(i => document.querySelector(`[data-index='${i}']`).classList.add('correct'));
+        } else {
+            msg.innerText = "❌ 正解は: " + currentChord.target.join(' ');
+            msg.style.color = "#f7768e";
+            selectedIndices.forEach(i => document.querySelector(`[data-index='${i}']`).classList.add('wrong'));
+        }
+        document.getElementById('check-btn').style.display = "none";
+        document.getElementById('next-btn').style.display = "block";
+    }
+
+    function resetKeyClasses() {
+        document.querySelectorAll('.key').forEach(k => k.classList.remove('active', 'correct', 'wrong'));
+    }
+
+    function showResult() {
+        document.getElementById('result-screen').style.display = "flex";
+        document.getElementById('result-score').innerText = `${correctCount} / ${totalQuestions}`;
+    }
+
+    function resetGame() {
+        correctCount = 0; questionCount = 0;
+        document.getElementById('result-screen').style.display = "none";
+        nextQuestion();
+    }
+
+    nextQuestion();
+</script>
+</body>
+</html>
